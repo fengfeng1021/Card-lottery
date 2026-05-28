@@ -1,5 +1,4 @@
 import { PrizeItem } from '../types';
-import { useEffect, useState } from 'react';
 
 interface MarqueeEdgesProps {
   active: boolean;
@@ -8,25 +7,29 @@ interface MarqueeEdgesProps {
 }
 
 export default function MarqueeEdges({ active, paused, items }: MarqueeEdgesProps) {
-  // If no items are selected, provide some fallbacks just for visuals
-  const displayItems = items.length > 0 ? items : [{ id: 'f1', name: 'Mysterious Prize' }, { id: 'f2', name: 'Grand Jackpot' }, { id: 'f3', name: 'Surprise Box' }];
-  
-  // Duplicate for smooth marquee
-  const repeatedItems = Array(12).fill(displayItems).flat();
+  const displayItems = items.length
+    ? items
+    : [
+        { id: 'f1', name: '神秘獎品' },
+        { id: 'f2', name: '最大獎' },
+        { id: 'f3', name: '驚喜禮盒' },
+      ];
+
+  const repeatedItems = Array(12).fill(displayItems).flat() as PrizeItem[];
 
   const MarqueeContent = () => (
     <>
       <div className="marquee-content" style={{ animationPlayState: paused ? 'paused' : 'running' }}>
-        {repeatedItems.map((item, idx) => (
-          <span key={`${item.id}-${idx}`} className="prize-tag">
-            <span>✦</span> {item.name}
+        {repeatedItems.map((item, index) => (
+          <span key={`${item.id}-${index}`} className="prize-tag">
+            <span>*</span> {item.name}
           </span>
         ))}
       </div>
       <div className="marquee-content" style={{ animationPlayState: paused ? 'paused' : 'running' }}>
-        {repeatedItems.map((item, idx) => (
-          <span key={`dup-${item.id}-${idx}`} className="prize-tag">
-            <span>✦</span> {item.name}
+        {repeatedItems.map((item, index) => (
+          <span key={`dup-${item.id}-${index}`} className="prize-tag">
+            <span>*</span> {item.name}
           </span>
         ))}
       </div>
