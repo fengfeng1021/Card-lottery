@@ -68,6 +68,210 @@ body {
     touch-action: pan-y;
 }
 
+.view-mode-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    border-radius: 0.55rem;
+    padding: 0.55rem 0.75rem;
+    color: rgba(255, 255, 255, 0.55);
+    font-family: var(--font-label-sm);
+    font-size: 0.78rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: color 180ms ease, background-color 180ms ease, box-shadow 180ms ease;
+}
+
+.view-mode-button:hover {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.view-mode-button.is-active {
+    color: #001f1f;
+    background: #00fbfb;
+    box-shadow: 0 0 18px rgba(0, 251, 251, 0.32);
+}
+
+/* 2D Pool List */
+.pool-list-shell {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 251, 251, 0.35) transparent;
+}
+
+.pool-list-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-height: 112px;
+    padding: 0.75rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 1rem;
+    background: rgba(15, 15, 15, 0.82);
+    backdrop-filter: blur(14px);
+    transition: transform 220ms ease, border-color 220ms ease, background-color 220ms ease, box-shadow 220ms ease;
+}
+
+.pool-list-item:hover {
+    transform: translateY(-2px);
+    border-color: var(--pool-color);
+    background: rgba(24, 24, 24, 0.92);
+    box-shadow: 0 14px 36px rgba(0, 0, 0, 0.45), 0 0 22px color-mix(in srgb, var(--pool-color) 22%, transparent);
+}
+
+.pool-cover-2d {
+    position: relative;
+    display: flex;
+    flex: 0 0 auto;
+    width: 62px;
+    height: 86px;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 0.6rem;
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.5);
+}
+
+.pool-cover-2d::after {
+    content: '';
+    position: absolute;
+    inset: 7px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 0.35rem;
+}
+
+.pool-cover-2d__line {
+    position: absolute;
+    inset: 0 0 auto;
+    height: 3px;
+}
+
+.pool-cover-2d span {
+    position: absolute;
+    right: 7px;
+    bottom: 5px;
+    color: rgba(255, 255, 255, 0.42);
+    font-family: var(--font-label-sm);
+    font-size: 0.62rem;
+}
+
+.pool-edit-button {
+    display: grid;
+    flex: 0 0 auto;
+    width: 42px;
+    height: 42px;
+    place-items: center;
+    border-radius: 999px;
+    color: rgba(255, 255, 255, 0.46);
+    cursor: pointer;
+    transition: color 180ms ease, background-color 180ms ease, transform 180ms ease;
+}
+
+.pool-edit-button:hover {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.1);
+    transform: scale(1.06);
+}
+
+.draw-button__shine {
+    left: -55%;
+    transition: left 500ms ease;
+}
+
+.draw-button:hover .draw-button__shine {
+    left: 125%;
+}
+
+/* Winner reveal */
+.shuffle-card {
+    width: 150px;
+    height: 218px;
+    border: 2px solid;
+    border-radius: 1rem;
+    padding: 10px;
+    box-shadow: 0 20px 55px rgba(0, 0, 0, 0.75);
+    will-change: transform;
+}
+
+.shuffle-card__inner {
+    display: grid;
+    width: 100%;
+    height: 100%;
+    place-items: center;
+    border: 1px solid;
+    border-radius: 0.65rem;
+    background: radial-gradient(circle at center, rgba(255, 255, 255, 0.08), transparent 60%);
+}
+
+.winner-stage {
+    perspective: 1400px;
+}
+
+.winner-card-new {
+    transform-style: preserve-3d;
+}
+
+.winner-card-grid {
+    background-image:
+        linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+    background-size: 34px 34px;
+    mask-image: radial-gradient(circle at center, black, transparent 78%);
+}
+
+.winner-burst {
+    border: 3px solid;
+    box-shadow: 0 0 50px currentColor;
+}
+
+.winner-text-style-new {
+    font-family: var(--font-display-lg);
+    font-size: clamp(2.6rem, 9vw, 7.5rem);
+    font-weight: 800;
+    line-height: 1.02;
+    text-shadow: 0 0 26px rgba(0, 251, 251, 0.42);
+}
+
+.winner-action-button {
+    min-width: 148px;
+    padding: 0.9rem 1.6rem;
+    border: 2px solid;
+    border-radius: 0.8rem;
+    background: rgba(0, 0, 0, 0.28);
+    font-family: var(--font-headline-md);
+    font-size: 1.05rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    cursor: pointer;
+    transition: transform 180ms ease, background-color 180ms ease, box-shadow 180ms ease;
+}
+
+.winner-action-button:hover {
+    transform: translateY(-2px);
+    background: rgba(255, 255, 255, 0.08);
+    box-shadow: 0 0 25px currentColor;
+}
+
+@media (max-width: 520px) {
+    .shuffle-card {
+        width: 112px;
+        height: 164px;
+    }
+
+    .pool-list-item {
+        min-height: 102px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .draw-button__shine,
+    .winner-text-style,
+    .marquee-content {
+        animation: none !important;
+    }
+}
+
 /* 3D Carousel Layout */
 .carousel-container {
     perspective: 2000px;

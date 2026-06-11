@@ -42,9 +42,10 @@ export default function DrawModal({ isOpen, pool, onClose, onDraw }: DrawModalPr
             <div className="flex justify-center relative z-10 py-4">
               <button
                 onClick={onDraw}
-                className="relative group w-full py-6 bg-transparent overflow-hidden rounded-lg border-2 border-primary-fixed cursor-pointer"
+                className="draw-button relative group w-full py-6 bg-transparent overflow-hidden rounded-lg border-2 border-primary-fixed cursor-pointer"
               >
                 <div className="absolute inset-0 bg-primary-fixed transform scale-x-0 origin-left group-hover:scale-x-100 transition-transform duration-300 ease-out z-0" />
+                <div className="draw-button__shine absolute inset-y-0 w-1/3 -skew-x-12 bg-white/35" />
                 <span className="relative z-10 font-display-lg font-bold text-2xl text-primary-fixed group-hover:text-black transition-colors duration-300 tracking-widest uppercase">
                   立即抽獎
                 </span>

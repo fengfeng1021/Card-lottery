@@ -1,47 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Plus } from 'lucide-react';
+import { Box, List, Plus } from 'lucide-react';
 import { PrizePool } from './types';
 import ParticleBackground from './components/ParticleBackground';
 import Carousel from './components/Carousel';
+import PoolList from './components/PoolList';
 import CreatePoolModal from './components/CreatePoolModal';
 import DrawModal from './components/DrawModal';
 import MarqueeEdges from './components/MarqueeEdges';
 import WinnerReveal from './components/WinnerReveal';
 import { loadPrizePools, savePrizePools } from './storage';
 
-const DEFAULT_POOLS: PrizePool[] = [
-  {
-    id: '1',
-    title: '年終尾牙大獎',
-    color: '#00fbfb',
-    gradientTo: '#fe00fe',
-    items: [
-      { id: '1-1', name: 'iPhone 15' },
-      { id: '1-2', name: 'MacBook Air' },
-      { id: '1-3', name: '現金 100000' },
-    ],
-  },
-  {
-    id: '2',
-    title: '行銷活動抽獎',
-    color: '#ffabf3',
-    gradientTo: '#e9ddff',
-    items: [
-      { id: '2-1', name: '禮券 500' },
-      { id: '2-2', name: '神秘禮盒' },
-    ],
-  },
-  {
-    id: '3',
-    title: '內部績效抽獎',
-    color: '#e9ddff',
-    gradientTo: '#3a4a49',
-    items: [
-      { id: '3-1', name: '帶薪休假一天' },
-      { id: '3-2', name: '咖啡兌換券' },
-    ],
-  },
-];
+type ViewMode = 'carousel' | 'list';
 
 const pickWinner = (pool: PrizePool) => {
   const weightedItems = pool.items.filter(
@@ -64,7 +33,8 @@ const pickWinner = (pool: PrizePool) => {
 };
 
 export default function App() {
-  const [pools, setPools] = useState<PrizePool[]>(() => loadPrizePools(DEFAULT_POOLS));
+  const [pools, setPools] = useState<PrizePool[]>(loadPrizePools);
+  const [viewMode, setViewMode] = useState<ViewMode>('carousel');
   const [isPoolModalOpen, setIsPoolModalOpen] = useState(false);
   const [editingPool, setEditingPool] = useState<PrizePool | null>(null);
 
@@ -160,7 +130,32 @@ export default function App() {
       <MarqueeEdges active={marqueeActive} paused={marqueePaused} items={selectedPool?.items || []} />
 
       <div className="w-full h-screen flex flex-col relative z-20">
-        <header className="bg-transparent fixed top-0 w-full flex justify-end items-center px-4 md:px-6 py-4 z-50 pointer-events-none">
+        <header className="bg-transparent fixed top-0 w-full flex justify-between items-center px-4 md:px-6 py-4 z-50 pointer-events-none">
+          <div
+            className="pointer-events-auto inline-flex items-center gap-1 rounded-xl border border-white/10 bg-black/65 p-1 shadow-lg backdrop-blur-xl"
+            role="group"
+            aria-label="顯示模式"
+          >
+            <button
+              onClick={() => setViewMode('carousel')}
+              aria-pressed={viewMode === 'carousel'}
+              className={`view-mode-button ${viewMode === 'carousel' ? 'is-active' : ''}`}
+              title="3D 卡組模式"
+            >
+              <Box size={18} />
+              <span>3D</span>
+            </button>
+            <button
+              onClick={() => setViewMode('list')}
+              aria-pressed={viewMode === 'list'}
+              className={`view-mode-button ${viewMode === 'list' ? 'is-active' : ''}`}
+              title="列表模式"
+            >
+              <List size={18} />
+              <span>列表</span>
+            </button>
+          </div>
+
           <button
             onClick={openCreatePool}
             aria-label="新增獎池"
@@ -172,7 +167,11 @@ export default function App() {
         </header>
 
         <main className="flex-grow w-full max-w-[100vw] relative">
-          <Carousel pools={pools} onSelectPool={handleSelectPool} onEditPool={openEditPool} />
+          {viewMode === 'carousel' ? (
+            <Carousel pools={pools} onSelectPool={handleSelectPool} onEditPool={openEditPool} />
+          ) : (
+            <PoolList pools={pools} onSelectPool={handleSelectPool} onEditPool={openEditPool} />
+          )}
         </main>
       </div>
 
@@ -186,7 +185,13 @@ export default function App() {
 
       <DrawModal isOpen={isDrawModalOpen && !isDrawing} pool={selectedPool} onClose={closeDrawModal} onDraw={executeDraw} />
 
-      <WinnerReveal isOpen={isDrawing} winnerName={winnerName} onClose={closeWinner} onDrawAgain={executeDrawAgain} />
+      <WinnerReveal
+        isOpen={isDrawing}
+        pool={selectedPool}
+        winnerName={winnerName}
+        onClose={closeWinner}
+        onDrawAgain={executeDrawAgain}
+      />
     </div>
   );
 }

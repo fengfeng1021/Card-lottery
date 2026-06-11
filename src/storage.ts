@@ -49,23 +49,23 @@ const sanitizePool = (value: unknown, fallbackId: string): PrizePool | null => {
   };
 };
 
-export const loadPrizePools = (fallback: PrizePool[]): PrizePool[] => {
-  if (typeof window === 'undefined') return fallback;
+export const loadPrizePools = (): PrizePool[] => {
+  if (typeof window === 'undefined') return [];
 
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return fallback;
+    if (!raw) return [];
 
     const parsed: unknown = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return fallback;
+    if (!Array.isArray(parsed)) return [];
 
     const pools = parsed
       .map((pool, index) => sanitizePool(pool, `pool-${index + 1}`))
       .filter((pool): pool is PrizePool => pool !== null);
 
-    return pools.length ? pools : fallback;
+    return pools;
   } catch {
-    return fallback;
+    return [];
   }
 };
 
