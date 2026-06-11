@@ -1,26 +1,18 @@
-import { CSSProperties, MouseEvent } from 'react';
+import { CSSProperties } from 'react';
 import { PrizePool } from '../types';
 
 interface DeckStackProps {
   pool: PrizePool;
   onClick: (pool: PrizePool) => void;
-  onEdit: (pool: PrizePool) => void;
   thicknessScale?: number;
 }
 
-export default function DeckStack({ pool, onClick, onEdit, thicknessScale = 1 }: DeckStackProps) {
-  const handleContextMenu = (event: MouseEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    event.stopPropagation();
-    onEdit(pool);
-  };
-
+export default function DeckStack({ pool, onClick, thicknessScale = 1 }: DeckStackProps) {
   return (
     <div
       className="deck-stack group"
       onClick={() => onClick(pool)}
-      onContextMenu={handleContextMenu}
-      title="右鍵編輯獎池"
+      title="點擊開啟獎池"
       style={
         {
           '--glow-color': pool.color,

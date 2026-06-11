@@ -51,7 +51,7 @@ export default function WinnerReveal({
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          className="fixed inset-0 z-[200] flex items-center justify-center overflow-hidden bg-black/90 px-4"
+          className="winner-screen fixed inset-0 z-[200] flex items-center justify-center overflow-hidden bg-black/90"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -70,7 +70,7 @@ export default function WinnerReveal({
             {phase === 'shuffling' ? (
               <motion.div
                 key="shuffle"
-                className="relative flex h-[420px] w-full max-w-xl items-center justify-center"
+                className="shuffle-stage relative flex w-full max-w-xl items-center justify-center"
                 exit={{ scale: 1.45, opacity: 0, filter: 'blur(14px)' }}
                 transition={{ duration: 0.28, ease: 'easeIn' }}
               >
@@ -133,7 +133,7 @@ export default function WinnerReveal({
                 />
 
                 <div
-                  className="winner-card-new relative flex min-h-[520px] w-full flex-col items-center justify-center overflow-hidden rounded-[2rem] border-2 px-6 py-10 text-center md:min-h-[620px] md:px-12"
+                  className="winner-card-new relative flex w-full flex-col items-center justify-center overflow-hidden rounded-[2rem] border-2 text-center"
                   style={{
                     borderColor: primaryColor,
                     background: `linear-gradient(145deg, ${primaryColor}18, #080808 38%, #080808 65%, ${secondaryColor}1f)`,

@@ -44,7 +44,6 @@ export default function App() {
   const [winnerName, setWinnerName] = useState('');
 
   const [marqueeActive, setMarqueeActive] = useState(false);
-  const [marqueePaused, setMarqueePaused] = useState(false);
 
   const selectedPool = useMemo(
     () => pools.find((pool) => pool.id === selectedPoolId) ?? null,
@@ -54,6 +53,38 @@ export default function App() {
   useEffect(() => {
     savePrizePools(pools);
   }, [pools]);
+
+  useEffect(() => {
+    const preventContextMenu = (event: MouseEvent) => event.preventDefault();
+    const preventZoomWheel = (event: WheelEvent) => {
+      if (event.ctrlKey) event.preventDefault();
+    };
+    const preventZoomKeys = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && ['+', '-', '=', '0'].includes(event.key)) {
+        event.preventDefault();
+      }
+    };
+    const preventMultiTouch = (event: TouchEvent) => {
+      if (event.touches.length > 1) event.preventDefault();
+    };
+    const preventGesture = (event: Event) => event.preventDefault();
+
+    document.addEventListener('contextmenu', preventContextMenu);
+    document.addEventListener('gesturestart', preventGesture);
+    document.addEventListener('gesturechange', preventGesture);
+    document.addEventListener('touchmove', preventMultiTouch, { passive: false });
+    window.addEventListener('wheel', preventZoomWheel, { passive: false });
+    window.addEventListener('keydown', preventZoomKeys);
+
+    return () => {
+      document.removeEventListener('contextmenu', preventContextMenu);
+      document.removeEventListener('gesturestart', preventGesture);
+      document.removeEventListener('gesturechange', preventGesture);
+      document.removeEventListener('touchmove', preventMultiTouch);
+      window.removeEventListener('wheel', preventZoomWheel);
+      window.removeEventListener('keydown', preventZoomKeys);
+    };
+  }, []);
 
   const openCreatePool = () => {
     setEditingPool(null);
@@ -89,7 +120,6 @@ export default function App() {
     setSelectedPoolId(pool.id);
     setIsDrawModalOpen(true);
     setMarqueeActive(true);
-    setMarqueePaused(false);
   };
 
   const closeDrawModal = () => {
@@ -105,7 +135,6 @@ export default function App() {
 
     const winner = pickWinner(selectedPool);
     setWinnerName(winner.name);
-    setMarqueePaused(true);
     setIsDrawModalOpen(false);
     setIsDrawing(true);
   };
@@ -124,13 +153,13 @@ export default function App() {
   };
 
   return (
-    <div className="bg-black text-white font-body-md antialiased min-h-screen flex flex-col items-center justify-center overflow-hidden">
+    <div className="app-shell bg-black text-white font-body-md antialiased flex flex-col items-center justify-center overflow-hidden">
       <ParticleBackground />
 
-      <MarqueeEdges active={marqueeActive} paused={marqueePaused} items={selectedPool?.items || []} />
+      <MarqueeEdges active={marqueeActive} items={selectedPool?.items || []} />
 
-      <div className="w-full h-screen flex flex-col relative z-20">
-        <header className="bg-transparent fixed top-0 w-full flex justify-between items-center px-4 md:px-6 py-4 z-50 pointer-events-none">
+      <div className="app-viewport w-full flex flex-col relative z-20">
+        <header className="app-header bg-transparent fixed top-0 w-full flex justify-between items-center z-50 pointer-events-none">
           <div
             className="pointer-events-auto inline-flex items-center gap-1 rounded-xl border border-white/10 bg-black/65 p-1 shadow-lg backdrop-blur-xl"
             role="group"

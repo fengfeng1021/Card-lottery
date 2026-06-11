@@ -2,11 +2,10 @@ import { PrizeItem } from '../types';
 
 interface MarqueeEdgesProps {
   active: boolean;
-  paused: boolean;
   items: PrizeItem[];
 }
 
-export default function MarqueeEdges({ active, paused, items }: MarqueeEdgesProps) {
+export default function MarqueeEdges({ active, items }: MarqueeEdgesProps) {
   const displayItems = items.length
     ? items
     : [
@@ -19,14 +18,14 @@ export default function MarqueeEdges({ active, paused, items }: MarqueeEdgesProp
 
   const MarqueeContent = () => (
     <>
-      <div className="marquee-content" style={{ animationPlayState: paused ? 'paused' : 'running' }}>
+      <div className="marquee-content">
         {repeatedItems.map((item, index) => (
           <span key={`${item.id}-${index}`} className="prize-tag">
             <span>*</span> {item.name}
           </span>
         ))}
       </div>
-      <div className="marquee-content" style={{ animationPlayState: paused ? 'paused' : 'running' }}>
+      <div className="marquee-content">
         {repeatedItems.map((item, index) => (
           <span key={`dup-${item.id}-${index}`} className="prize-tag">
             <span>*</span> {item.name}

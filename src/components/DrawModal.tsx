@@ -19,7 +19,7 @@ export default function DrawModal({ isOpen, pool, onClose, onDraw }: DrawModalPr
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[100] flex items-center justify-center px-4 modal-backdrop"
+          className="modal-screen fixed inset-0 z-[100] flex items-center justify-center modal-backdrop"
           onClick={onClose}
         >
           <motion.div
@@ -27,7 +27,7 @@ export default function DrawModal({ isOpen, pool, onClose, onDraw }: DrawModalPr
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.95, opacity: 0 }}
             onClick={(event) => event.stopPropagation()}
-            className="bg-[#1E1E1E] border border-secondary-container/50 rounded-xl w-full max-w-sm p-6 shadow-[0_0_30px_rgba(255,0,255,0.15)] relative overflow-hidden"
+            className="draw-modal bg-[#1E1E1E] border border-secondary-container/50 rounded-xl w-full max-w-sm p-6 shadow-[0_0_30px_rgba(255,0,255,0.15)] relative overflow-hidden"
           >
             <div className="flex justify-between items-center mb-8 relative z-10">
               <div className="flex items-center gap-2 min-w-0">

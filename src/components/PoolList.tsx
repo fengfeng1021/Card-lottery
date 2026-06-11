@@ -1,4 +1,4 @@
-import { CSSProperties, MouseEvent } from 'react';
+import { CSSProperties } from 'react';
 import { Pencil, Sparkles } from 'lucide-react';
 import { PrizePool } from '../types';
 
@@ -9,11 +9,6 @@ interface PoolListProps {
 }
 
 export default function PoolList({ pools, onSelectPool, onEditPool }: PoolListProps) {
-  const handleContextMenu = (event: MouseEvent, pool: PrizePool) => {
-    event.preventDefault();
-    onEditPool(pool);
-  };
-
   if (pools.length === 0) {
     return (
       <div className="absolute inset-0 flex items-center justify-center px-6 text-center">
@@ -30,7 +25,6 @@ export default function PoolList({ pools, onSelectPool, onEditPool }: PoolListPr
             key={pool.id}
             className="pool-list-item group"
             style={{ '--pool-color': pool.color } as CSSProperties}
-            onContextMenu={(event) => handleContextMenu(event, pool)}
           >
             <button
               type="button"

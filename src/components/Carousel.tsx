@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { Pencil } from 'lucide-react';
 import { PrizePool } from '../types';
 import DeckStack from './DeckStack';
 
@@ -23,15 +24,27 @@ export default function Carousel({ pools, onSelectPool, onEditPool }: CarouselPr
   const suppressClick = useRef(false);
   const animationFrameId = useRef<number>(0);
   const wheelTimeout = useRef<number>(0);
+  const activeIndexRef = useRef(0);
 
   const numItems = pools.length;
 
   const calculateRadius = () => {
-    const radius = (window.innerWidth * 0.85) / 2;
-    return Math.max(300, radius);
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+
+    if (width < 600) {
+      return Math.max(185, Math.min(245, width * 0.56));
+    }
+
+    if (width < 1024) {
+      return Math.max(280, Math.min(390, width * 0.42, height * 0.42));
+    }
+
+    return Math.max(420, Math.min(720, width * 0.42));
   };
 
   const [radius, setRadius] = useState(300);
+  const [activeIndex, setActiveIndex] = useState(0);
 
   useEffect(() => {
     const handleResize = () => setRadius(calculateRadius());
@@ -57,8 +70,13 @@ export default function Carousel({ pools, onSelectPool, onEditPool }: CarouselPr
       }
 
       const anglePerItem = 360 / numItems;
-      const activeIndex = getWrappedIndex(Math.round(-currentAngle.current / anglePerItem), numItems);
+      const nextActiveIndex = getWrappedIndex(Math.round(-currentAngle.current / anglePerItem), numItems);
       const stretchFactor = Math.max(0.6, 1 - Math.abs(velocity) / 16);
+
+      if (activeIndexRef.current !== nextActiveIndex) {
+        activeIndexRef.current = nextActiveIndex;
+        setActiveIndex(nextActiveIndex);
+      }
 
       itemsRef.current.forEach((item, index) => {
         if (!item) return;
@@ -69,7 +87,7 @@ export default function Carousel({ pools, onSelectPool, onEditPool }: CarouselPr
         const deck = item.querySelector('.deck-stack') as HTMLElement | null;
         if (deck) {
           deck.style.setProperty('--thickness-scale', stretchFactor.toString());
-          deck.classList.toggle('is-selected', index === activeIndex && Math.abs(velocity) < 0.9);
+          deck.classList.toggle('is-selected', index === nextActiveIndex && Math.abs(velocity) < 0.9);
         }
       });
 
@@ -165,10 +183,26 @@ export default function Carousel({ pools, onSelectPool, onEditPool }: CarouselPr
             }}
             className="carousel-item"
           >
-            <DeckStack pool={pool} onClick={handleSelect} onEdit={onEditPool} />
+            <DeckStack pool={pool} onClick={handleSelect} />
           </div>
         ))}
       </div>
+
+      {pools[activeIndex] && (
+        <button
+          type="button"
+          className="carousel-active-edit"
+          onClick={() => onEditPool(pools[activeIndex])}
+          onPointerDown={(event) => event.stopPropagation()}
+          onMouseDown={(event) => event.stopPropagation()}
+          onTouchStart={(event) => event.stopPropagation()}
+          aria-label={`編輯 ${pools[activeIndex].title}`}
+          title="編輯目前獎池"
+        >
+          <Pencil size={18} />
+          <span>編輯</span>
+        </button>
+      )}
     </div>
   );
 }

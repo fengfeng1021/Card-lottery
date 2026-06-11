@@ -212,7 +212,7 @@ export default function CreatePoolModal({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[100] flex items-center justify-center px-4 modal-backdrop"
+          className="modal-screen fixed inset-0 z-[100] flex items-center justify-center modal-backdrop"
           onClick={onClose}
         >
           <motion.div
@@ -221,7 +221,7 @@ export default function CreatePoolModal({
             exit={{ scale: 0.95, opacity: 0 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
             onClick={(event) => event.stopPropagation()}
-            className="bg-[#121212] border border-[#333333] rounded-xl w-full max-w-2xl p-6 cyber-glow relative overflow-hidden"
+            className="pool-modal bg-[#121212] border border-[#333333] rounded-xl w-full max-w-2xl p-6 cyber-glow relative overflow-y-auto"
           >
             <div className="absolute top-0 left-0 w-1 h-full bg-primary-fixed" />
 
