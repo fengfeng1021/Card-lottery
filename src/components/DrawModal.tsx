@@ -36,7 +36,13 @@ export default function DrawModal({
   const exhausted = !pool.allowRepeat && remaining === 0;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} labelledById={titleId} panelClassName="draw-modal-panel">
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      labelledById={titleId}
+      panelClassName="draw-modal-panel"
+      screenClassName="draw-modal-screen"
+    >
       <div className="draw-modal bg-[#141414] border border-secondary-container/50 rounded-2xl w-full max-w-sm p-6 shadow-[0_0_40px_rgba(255,0,255,0.18)] relative overflow-hidden">
         <div className="flex justify-between items-center mb-6 relative z-10">
           <div className="flex items-center gap-2 min-w-0">

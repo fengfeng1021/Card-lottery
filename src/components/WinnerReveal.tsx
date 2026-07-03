@@ -73,6 +73,9 @@ export default function WinnerReveal({
     gsap.set(overlay, { autoAlpha: 1 });
     gsap.set(shuffleStage, { autoAlpha: 1 });
     gsap.set(winnerStage, { autoAlpha: 0 });
+    // Pre-hide the reveal content so nothing is visible inside the card while it flips in;
+    // each element then animates in via its own fromTo below.
+    gsap.set([...congrats, ...nameEl, ...sub, ...actions], { autoAlpha: 0 });
 
     const tl = gsap.timeline();
 
@@ -101,8 +104,8 @@ export default function WinnerReveal({
         scale: 1,
         autoAlpha: 1,
         rotate: (i) => FAN[i].rotate,
-        duration: 0.55,
-        stagger: 0.06,
+        duration: 0.5,
+        stagger: 0.05,
         ease: 'back.out(1.6)',
       },
     )
@@ -112,50 +115,48 @@ export default function WinnerReveal({
           x: (i) => FAN[i].x * -0.42,
           y: (i) => (i % 2 ? -18 : 14),
           rotate: (i) => FAN[i].rotate * -0.5,
-          duration: 0.42,
+          duration: 0.38,
           ease: 'sine.inOut',
-          stagger: { each: 0.05, from: 'center' },
-          repeat: 1,
-          yoyo: true,
+          stagger: { each: 0.04, from: 'center' },
         },
-        '+=0.05',
+        '+=0.03',
       )
       .to(cards, {
         x: 0,
         y: 0,
         rotate: 0,
         scale: 0.92,
-        duration: 0.32,
+        duration: 0.3,
         ease: 'power3.in',
-        stagger: 0.03,
+        stagger: 0.025,
       })
-      .to(cards, { scale: 1.35, autoAlpha: 0, duration: 0.3, ease: 'power2.in' }, '-=0.12')
+      .to(cards, { scale: 1.35, autoAlpha: 0, duration: 0.28, ease: 'power2.in' }, '-=0.1')
       .set(shuffleStage, { autoAlpha: 0 })
       .set(winnerStage, { autoAlpha: 1 })
       .fromTo(
         card,
         { rotateY: 90, scale: 0.42, autoAlpha: 0 },
-        { rotateY: 0, scale: 1, autoAlpha: 1, duration: 0.7, ease: 'back.out(1.3)' },
+        { rotateY: 0, scale: 1, autoAlpha: 1, duration: 0.65, ease: 'back.out(1.3)' },
       )
       .fromTo(
         burst,
         { scale: 0.2, autoAlpha: 1 },
-        { scale: 1.35, autoAlpha: 0, duration: 0.85, ease: 'power2.out' },
+        { scale: 1.35, autoAlpha: 0, duration: 0.8, ease: 'power2.out' },
         '<',
       )
-      .fromTo(congrats, { y: 16, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.4 }, '-=0.32')
+      .fromTo(congrats, { y: 16, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.35 }, '-=0.35')
       .fromTo(
         nameEl,
         { y: 30, autoAlpha: 0, filter: 'blur(14px)' },
-        { y: 0, autoAlpha: 1, filter: 'blur(0px)', duration: 0.6, ease: 'power3.out' },
-        '-=0.15',
+        { y: 0, autoAlpha: 1, filter: 'blur(0px)', duration: 0.55, ease: 'power3.out' },
+        '-=0.18',
       )
-      .fromTo(sub, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.4 }, '-=0.2')
+      .fromTo(sub, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.35 }, '-=0.2')
       .fromTo(
         actions,
         { y: 18, autoAlpha: 0 },
-        { y: 0, autoAlpha: 1, duration: 0.4, stagger: 0.08 },
-        '-=0.15',
+        { y: 0, autoAlpha: 1, duration: 0.35, stagger: 0.06 },
+        '-=0.12',
       )
       .add(() => {
         gsap.fromTo(
@@ -190,7 +191,7 @@ export default function WinnerReveal({
   return createPortal(
     <div
       ref={overlayRef}
-      className="winner-screen fixed inset-0 z-[200] flex items-center justify-center overflow-hidden bg-black/90"
+      className="winner-screen fixed inset-0 z-[200] grid place-items-center overflow-hidden bg-black/90"
       role="dialog"
       aria-modal="true"
       aria-label="抽獎結果"
@@ -206,7 +207,7 @@ export default function WinnerReveal({
         {isOpen ? `恭喜中獎：${winnerName}` : ''}
       </p>
 
-      <div className="shuffle-stage relative flex w-full max-w-xl items-center justify-center">
+      <div className="shuffle-stage col-start-1 row-start-1 relative flex w-full max-w-xl items-center justify-center">
         <p className="winner-shuffle-label absolute top-4 font-label-md text-sm font-bold tracking-[0.38em] text-white/70 md:text-base">
           正在抽取
         </p>
@@ -226,7 +227,7 @@ export default function WinnerReveal({
         ))}
       </div>
 
-      <div className="winner-stage relative z-10 flex w-full max-w-4xl items-center justify-center">
+      <div className="winner-stage col-start-1 row-start-1 relative z-10 flex w-full max-w-4xl items-center justify-center">
         <div
           className="winner-burst pointer-events-none absolute h-[min(78vw,620px)] w-[min(78vw,620px)] rounded-full"
           style={{ borderColor: primaryColor }}

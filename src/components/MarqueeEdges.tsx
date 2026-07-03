@@ -1,4 +1,4 @@
-import { memo, useMemo } from 'react';
+import { memo, useMemo, useRef } from 'react';
 import { PrizeItem } from '../types';
 
 interface MarqueeEdgesProps {
@@ -12,10 +12,13 @@ const FALLBACK_ITEMS: PrizeItem[] = [
   { id: 'f3', name: '驚喜禮盒' },
 ];
 
-// Enough copies to fill a wide bar, but capped so large pools don't explode the DOM.
+// Enough copies to overfill even a wide bar, but capped so large pools don't explode the DOM.
+// The copy count must stay EVEN: the -50% keyframe loops seamlessly only when the strip's
+// two halves are identical, otherwise the wrap point visibly jumps.
 const buildStrip = (items: PrizeItem[]): PrizeItem[] => {
-  const source = items.length ? items.slice(0, 24) : FALLBACK_ITEMS;
-  const repeat = Math.max(2, Math.ceil(24 / source.length));
+  const source = items.length ? items.slice(0, 32) : FALLBACK_ITEMS;
+  let repeat = Math.max(2, Math.ceil(48 / source.length));
+  if (repeat % 2 === 1) repeat += 1;
   return Array.from({ length: repeat }, () => source).flat();
 };
 
@@ -39,7 +42,13 @@ const MarqueeStrip = ({ strip }: { strip: PrizeItem[] }) => (
 );
 
 function MarqueeEdges({ active, items }: MarqueeEdgesProps) {
-  const strip = useMemo(() => buildStrip(items), [items]);
+  // Keep showing the last real prize list while the overlay fades out, so the strips
+  // don't flash to the fallback text when the pool selection clears mid-fade.
+  const lastItems = useRef<PrizeItem[]>([]);
+  if (items.length) lastItems.current = items;
+  const effectiveItems = items.length ? items : lastItems.current;
+
+  const strip = useMemo(() => buildStrip(effectiveItems), [effectiveItems]);
 
   // Strips stay mounted so the container can fade smoothly; CSS pauses their
   // animation while inactive so nothing renders/composites in the background.

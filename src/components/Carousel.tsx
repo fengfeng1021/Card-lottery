@@ -94,10 +94,11 @@ export default function Carousel({ pools, onSelectPool, onEditPool }: CarouselPr
       const f = (Math.cos(facing) + 1) / 2; // 0 = back, 1 = front
       const scale = 0.82 + 0.18 * f;
 
+      // Depth is conveyed via scale + a --depth-driven overlay on the card face.
+      // Never set opacity/filter here: they force the subtree to flatten, which
+      // breaks per-face backface-visibility and shows mirrored titles on far cards.
       item.style.transform = `rotateY(${i * anglePerItem}deg) translateZ(${r}px) scale(${scale})`;
-      item.style.opacity = `${(0.4 + 0.6 * f).toFixed(3)}`;
-      item.style.filter = `brightness(${(0.5 + 0.5 * f).toFixed(3)})`;
-      item.style.zIndex = `${Math.round(f * 100)}`;
+      item.style.setProperty('--depth', f.toFixed(3));
     }
 
     if (nextActive !== activeIndexRef.current) {

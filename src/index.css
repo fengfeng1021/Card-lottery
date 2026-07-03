@@ -393,9 +393,24 @@ button {
         padding-bottom: max(0.65rem, env(safe-area-inset-bottom));
     }
 
+    /* Vertical auto margins must live on the panel (the flex item of .modal-screen):
+       they center it when it fits and top-align it when it overflows. */
+    .draw-modal-panel,
+    .pool-modal-panel,
+    .history-modal-panel {
+        margin: auto 0;
+    }
+
+    /* The draw modal appears while the marquee frame is active — keep it clear of the 36px bars. */
+    .draw-modal-screen {
+        padding: max(calc(36px + 0.6rem), env(safe-area-inset-top))
+            max(calc(36px + 0.4rem), env(safe-area-inset-right))
+            max(calc(36px + 0.6rem), env(safe-area-inset-bottom))
+            max(calc(36px + 0.4rem), env(safe-area-inset-left));
+    }
+
     .pool-modal,
     .draw-modal {
-        margin: auto 0;
         padding: 1rem;
     }
 
@@ -460,6 +475,7 @@ button {
 }
 
 .carousel-item {
+    --depth: 1;
     position: absolute;
     top: 0;
     left: 0;
@@ -561,9 +577,25 @@ button {
     overflow: hidden;
     box-shadow: 0 10px 30px rgba(0,0,0,0.6);
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
     text-align: center;
+    /* Cards on the far side of the ring would otherwise show their title mirrored;
+       hiding the face leaves the plain deck layers visible, reading as a card back. */
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+}
+
+/* Depth cue: darken the card face as it turns away (driven per-frame via --depth). */
+.deck-layer.top-card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    background: #000;
+    opacity: calc((1 - var(--depth, 1)) * 0.72);
+    pointer-events: none;
 }
 
 .card-title-large {
@@ -713,11 +745,11 @@ button {
     box-shadow: 0 0 10px currentColor;
 }
 
-/* Deck item count under the title */
+/* Deck item count under the title (the title already carries 1rem padding) */
 .deck-count {
     position: relative;
     z-index: 10;
-    margin-top: 0.5rem;
+    margin-top: -0.25rem;
     font-family: var(--font-label-sm);
     font-size: 0.7rem;
     letter-spacing: 0.08em;
