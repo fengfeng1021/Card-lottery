@@ -1,8 +1,6 @@
 {
-  "name": "Remix: Untitled",
-  "description": "",
+  "name": "卡牌抽獎",
+  "description": "3D 卡組轉盤抽獎工具，支援自訂獎池、機率、抽獎記錄與不可重複中獎。",
   "requestFramePermissions": [],
-  "majorCapabilities": [
-    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
-  ]
+  "majorCapabilities": []
 }

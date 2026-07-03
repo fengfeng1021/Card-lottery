@@ -168,8 +168,14 @@ button {
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 1rem;
     background: rgba(15, 15, 15, 0.82);
-    backdrop-filter: blur(14px);
     transition: transform 220ms ease, border-color 220ms ease, background-color 220ms ease, box-shadow 220ms ease;
+}
+
+/* backdrop-filter is expensive per item on scroll; only enable it on capable (desktop) pointers. */
+@media (pointer: fine) {
+    .pool-list-item {
+        backdrop-filter: blur(14px);
+    }
 }
 
 .pool-list-item:hover {
@@ -255,6 +261,7 @@ button {
 }
 
 .shuffle-stage {
+    height: min(420px, 64vh);
     height: min(420px, 64dvh);
 }
 
@@ -274,7 +281,9 @@ button {
 
 .winner-card-new {
     transform-style: preserve-3d;
+    min-height: min(620px, calc(100vh - 2rem));
     min-height: min(620px, calc(100dvh - 2rem));
+    max-height: calc(100vh - 2rem);
     max-height: calc(100dvh - 2rem);
     padding: clamp(2rem, 5vh, 4rem) clamp(1.25rem, 5vw, 3rem);
 }
@@ -414,10 +423,11 @@ button {
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .draw-button__shine,
-    .winner-text-style,
     .marquee-content {
         animation: none !important;
+    }
+    .draw-button__shine {
+        transition: none !important;
     }
 }
 
@@ -436,6 +446,7 @@ button {
 .carousel-wrap {
     position: relative;
     width: clamp(210px, 72vw, 280px);
+    height: clamp(300px, 60vh, 400px);
     height: clamp(300px, 60dvh, 400px);
     transform-style: preserve-3d;
     will-change: transform;
@@ -455,7 +466,6 @@ button {
     width: 100%;
     height: 100%;
     transform-style: preserve-3d;
-    will-change: transform;
 }
 
 /* Individual Deck Stack */
@@ -534,9 +544,9 @@ button {
     border-radius: 0.75rem;
     background-color: #1a1a1a;
     border: 1px solid #333;
-    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275),
+        box-shadow 0.3s ease, border-color 0.3s ease;
     box-shadow: 2px 2px 5px rgba(0,0,0,0.5);
-    will-change: transform;
 }
 
 .deck-layer:nth-child(1) { transform: translateZ(calc(var(--thickness-scale, 1) * -12px)) translateY(calc(var(--thickness-scale, 1) * 6px)); background-color: #080808; border-color: #1a1a1a; }
@@ -585,13 +595,168 @@ button {
     outline: none;
 }
 
+/* Modal dialog panels (width lives on the panel; inner card uses w-full) */
+.draw-modal-panel,
+.pool-modal-panel,
+.history-modal-panel {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+}
+.draw-modal-panel { max-width: 24rem; }
+.pool-modal-panel { max-width: 42rem; }
+.history-modal-panel { max-width: 32rem; }
+
+/* Header icon buttons + history badge */
+.header-icon-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem;
+    border-radius: 999px;
+    color: #ffffff;
+    cursor: pointer;
+    transition: color 300ms ease, background-color 300ms ease, transform 300ms ease;
+}
+.header-icon-button:hover {
+    color: var(--color-primary-fixed);
+    background: rgba(255, 255, 255, 0.1);
+    transform: scale(1.08);
+}
+.header-icon-button--add:hover {
+    transform: scale(1.1) rotate(90deg);
+}
+.header-badge {
+    position: absolute;
+    top: -1px;
+    right: -1px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 4px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    background: var(--color-secondary-container);
+    color: #ffffff;
+    font-family: var(--font-label-sm);
+    font-size: 0.62rem;
+    font-weight: 700;
+    line-height: 1;
+    box-shadow: 0 0 10px rgba(254, 0, 254, 0.5);
+    pointer-events: none;
+}
+
+/* Repeat-winner toggle inside the draw modal */
+.draw-repeat-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 0.65rem 0.85rem;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 0.7rem;
+    background: rgba(255, 255, 255, 0.03);
+    cursor: pointer;
+    transition: border-color 200ms ease, background-color 200ms ease;
+}
+.draw-repeat-toggle:hover {
+    border-color: rgba(0, 251, 251, 0.4);
+    background: rgba(255, 255, 255, 0.06);
+}
+.draw-repeat-switch {
+    position: relative;
+    width: 42px;
+    height: 24px;
+    border-radius: 999px;
+    background: var(--color-surface-bright);
+    transition: background-color 200ms ease;
+    flex: 0 0 auto;
+}
+.draw-repeat-switch.is-on {
+    background: var(--color-primary-container);
+}
+.draw-repeat-knob {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 20px;
+    height: 20px;
+    border-radius: 999px;
+    background: #ffffff;
+    transition: transform 200ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.draw-repeat-switch.is-on .draw-repeat-knob {
+    transform: translateX(18px);
+}
+
+/* Draw history list */
+.history-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.6rem 0.7rem;
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 0.7rem;
+    background: rgba(255, 255, 255, 0.02);
+    transition: border-color 180ms ease, background-color 180ms ease;
+}
+.history-row:hover {
+    border-color: rgba(255, 255, 255, 0.16);
+    background: rgba(255, 255, 255, 0.05);
+}
+.history-dot {
+    flex: 0 0 auto;
+    width: 12px;
+    height: 12px;
+    border-radius: 999px;
+    box-shadow: 0 0 10px currentColor;
+}
+
+/* Deck item count under the title */
+.deck-count {
+    position: relative;
+    z-index: 10;
+    margin-top: 0.5rem;
+    font-family: var(--font-label-sm);
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+/* Custom scrollbars for modal lists */
+.custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 251, 251, 0.35) transparent;
+}
+.custom-scrollbar::-webkit-scrollbar {
+    width: 8px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(0, 251, 251, 0.3);
+    border-radius: 999px;
+}
+
+/* Visible keyboard focus */
+.carousel-container:focus-visible {
+    outline: 2px solid var(--color-primary-fixed);
+    outline-offset: -6px;
+    border-radius: 1rem;
+}
+.view-mode-button:focus-visible,
+.header-icon-button:focus-visible,
+.winner-action-button:focus-visible,
+.draw-repeat-toggle:focus-visible {
+    outline: 2px solid var(--color-primary-fixed);
+    outline-offset: 2px;
+}
+
 /* Marquee Styles */
 .marquee-container {
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
+    inset: 0;
     height: 100vh;
+    height: 100dvh;
     pointer-events: none;
     z-index: 150;
     opacity: 0;
@@ -623,9 +788,17 @@ button {
     white-space: nowrap;
     width: fit-content;
     animation: marquee-h 60s linear infinite;
+    animation-play-state: paused;
+}
+.marquee-container.active .marquee-content {
+    animation-play-state: running;
 }
 .marquee-vertical .marquee-content {
     animation: marquee-v 60s linear infinite;
+    animation-play-state: paused;
+}
+.marquee-container.active .marquee-vertical .marquee-content {
+    animation-play-state: running;
 }
 .marquee-bottom .marquee-content, .marquee-left .marquee-content {
     animation-direction: reverse;
@@ -657,67 +830,9 @@ button {
 .prize-tag:nth-child(odd) { color: #ffabf3; text-shadow: 0 0 10px rgba(255, 171, 243, 0.8); }
 .prize-tag span { color: #ffffff; text-shadow: none; margin-right: 8px; }
 
-/* Pull Lines */
-.pull-line {
-    position: absolute;
-    background: #00dddd;
-    box-shadow: 0 0 20px #00dddd, 0 0 40px #ffabf3;
-    z-index: 201;
-    border-radius: 9999px;
-    will-change: transform, opacity;
-}
-.pull-top { top: 0; left: 50%; width: 4px; height: 55vh; transform: translateX(-50%) scaleY(0); transform-origin: top; animation: pull-v 0.95s cubic-bezier(0.7, 0, 0.3, 1) forwards; }
-.pull-bottom { bottom: 0; left: 50%; width: 4px; height: 55vh; transform: translateX(-50%) scaleY(0); transform-origin: bottom; animation: pull-v 0.95s cubic-bezier(0.7, 0, 0.3, 1) forwards; }
-.pull-left { top: 50%; left: 0; width: 55vw; height: 4px; transform: translateY(-50%) scaleX(0); transform-origin: left; animation: pull-h 0.95s cubic-bezier(0.7, 0, 0.3, 1) forwards; }
-.pull-right { top: 50%; right: 0; width: 55vw; height: 4px; transform: translateY(-50%) scaleX(0); transform-origin: right; animation: pull-h 0.95s cubic-bezier(0.7, 0, 0.3, 1) forwards; }
-
-@keyframes pull-v {
-    0% { opacity: 1; transform: translateX(-50%) scaleY(0); }
-    55% { opacity: 1; transform: translateX(-50%) scaleY(1); }
-    100% { opacity: 0; transform: translateX(-50%) scaleY(1); }
-}
-@keyframes pull-h {
-    0% { opacity: 1; transform: translateY(-50%) scaleX(0); }
-    55% { opacity: 1; transform: translateY(-50%) scaleX(1); }
-    100% { opacity: 0; transform: translateY(-50%) scaleX(1); }
-}
-
-@keyframes pulse-glow {
-    0%, 100% { 
-        text-shadow: 0 0 16px #00fbfb, 0 0 32px rgba(0,251,251,0.7), 0 0 56px rgba(255,171,243,0.45); 
-        transform: scale(1);
-    }
-    50% { 
-        text-shadow: 0 0 24px #00fbfb, 0 0 44px rgba(0,251,251,0.9), 0 0 72px rgba(255,171,243,0.65); 
-        transform: scale(1.015);
-    }
-}
-.winner-card {
-    contain: layout paint;
-    will-change: transform, opacity;
-}
-.winner-text-style {
-    animation: pulse-glow 2.5s ease-in-out infinite;
-    color: #ffffff;
-    font-weight: 800;
-    font-size: 2.75rem;
-    line-height: 1.05;
-    will-change: transform;
-}
-
-@media (min-width: 640px) {
-    .winner-text-style {
-        font-size: 5rem;
-    }
-}
-
 @media (min-width: 768px) {
     .card-title-large {
         font-size: 3rem;
-    }
-
-    .winner-text-style {
-        font-size: 8rem;
     }
 }
 

@@ -4,19 +4,20 @@ import { PrizePool } from '../types';
 interface DeckStackProps {
   pool: PrizePool;
   onClick: (pool: PrizePool) => void;
-  thicknessScale?: number;
 }
 
-export default function DeckStack({ pool, onClick, thicknessScale = 1 }: DeckStackProps) {
+export default function DeckStack({ pool, onClick }: DeckStackProps) {
   return (
     <div
       className="deck-stack group"
       onClick={() => onClick(pool)}
+      role="button"
+      aria-label={`開啟獎池 ${pool.title}`}
       title="點擊開啟獎池"
       style={
         {
           '--glow-color': pool.color,
-          '--thickness-scale': thicknessScale,
+          '--glow-to': pool.gradientTo,
         } as CSSProperties
       }
     >
@@ -35,6 +36,9 @@ export default function DeckStack({ pool, onClick, thicknessScale = 1 }: DeckSta
         <h2 className="card-title-large font-display-lg" style={{ fontFamily: 'Sora, sans-serif' }}>
           {pool.title}
         </h2>
+        <p className="deck-count" aria-hidden="true">
+          {pool.items.length} 項{pool.allowRepeat ? '' : ' · 不重複'}
+        </p>
         <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
       </div>
     </div>

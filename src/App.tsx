@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Box, List, Plus } from 'lucide-react';
-import { PrizePool } from './types';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Box, History, List, Plus } from 'lucide-react';
+import { DrawRecord, PrizeItem, PrizePool } from './types';
 import ParticleBackground from './components/ParticleBackground';
 import Carousel from './components/Carousel';
 import PoolList from './components/PoolList';
@@ -8,12 +8,17 @@ import CreatePoolModal from './components/CreatePoolModal';
 import DrawModal from './components/DrawModal';
 import MarqueeEdges from './components/MarqueeEdges';
 import WinnerReveal from './components/WinnerReveal';
-import { loadPrizePools, savePrizePools } from './storage';
+import HistoryModal from './components/HistoryModal';
+import { loadDrawRecords, loadPrizePools, saveDrawRecords, savePrizePools } from './storage';
+import { generateId } from './lib/id';
 
 type ViewMode = 'carousel' | 'list';
 
-const pickWinner = (pool: PrizePool) => {
-  const weightedItems = pool.items.filter(
+const pickWinner = (pool: PrizePool, excludedIds: Set<string>): PrizeItem | null => {
+  const available = pool.items.filter((item) => !excludedIds.has(item.id));
+  if (available.length === 0) return null;
+
+  const weightedItems = available.filter(
     (item) => typeof item.probability === 'number' && item.probability > 0,
   );
 
@@ -29,62 +34,55 @@ const pickWinner = (pool: PrizePool) => {
     return weightedItems[weightedItems.length - 1];
   }
 
-  return pool.items[Math.floor(Math.random() * pool.items.length)];
+  return available[Math.floor(Math.random() * available.length)];
+};
+
+const drawnIdsForPool = (pool: PrizePool | null): Set<string> => {
+  if (!pool || pool.allowRepeat) return new Set();
+  return new Set(pool.drawnItemIds ?? []);
 };
 
 export default function App() {
   const [pools, setPools] = useState<PrizePool[]>(loadPrizePools);
+  const [records, setRecords] = useState<DrawRecord[]>(loadDrawRecords);
   const [viewMode, setViewMode] = useState<ViewMode>('carousel');
   const [isPoolModalOpen, setIsPoolModalOpen] = useState(false);
   const [editingPool, setEditingPool] = useState<PrizePool | null>(null);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 
   const [selectedPoolId, setSelectedPoolId] = useState<string | null>(null);
   const [isDrawModalOpen, setIsDrawModalOpen] = useState(false);
   const [isDrawing, setIsDrawing] = useState(false);
   const [winnerName, setWinnerName] = useState('');
+  const [drawNonce, setDrawNonce] = useState(0);
 
   const [marqueeActive, setMarqueeActive] = useState(false);
+
+  // Deferred reset of the selected pool after the draw modal's exit animation; tracked so a fast re-select can cancel it.
+  const clearSelectionTimer = useRef<number>(0);
+  useEffect(() => () => window.clearTimeout(clearSelectionTimer.current), []);
 
   const selectedPool = useMemo(
     () => pools.find((pool) => pool.id === selectedPoolId) ?? null,
     [pools, selectedPoolId],
   );
 
+  const drawnItemIds = useMemo(() => Array.from(drawnIdsForPool(selectedPool)), [selectedPool]);
+
+  const canDrawAgain = useMemo(() => {
+    if (!selectedPool) return false;
+    if (selectedPool.allowRepeat) return true;
+    const drawn = drawnIdsForPool(selectedPool);
+    return selectedPool.items.some((item) => !drawn.has(item.id));
+  }, [selectedPool]);
+
   useEffect(() => {
     savePrizePools(pools);
   }, [pools]);
 
   useEffect(() => {
-    const preventContextMenu = (event: MouseEvent) => event.preventDefault();
-    const preventZoomWheel = (event: WheelEvent) => {
-      if (event.ctrlKey) event.preventDefault();
-    };
-    const preventZoomKeys = (event: KeyboardEvent) => {
-      if ((event.ctrlKey || event.metaKey) && ['+', '-', '=', '0'].includes(event.key)) {
-        event.preventDefault();
-      }
-    };
-    const preventMultiTouch = (event: TouchEvent) => {
-      if (event.touches.length > 1) event.preventDefault();
-    };
-    const preventGesture = (event: Event) => event.preventDefault();
-
-    document.addEventListener('contextmenu', preventContextMenu);
-    document.addEventListener('gesturestart', preventGesture);
-    document.addEventListener('gesturechange', preventGesture);
-    document.addEventListener('touchmove', preventMultiTouch, { passive: false });
-    window.addEventListener('wheel', preventZoomWheel, { passive: false });
-    window.addEventListener('keydown', preventZoomKeys);
-
-    return () => {
-      document.removeEventListener('contextmenu', preventContextMenu);
-      document.removeEventListener('gesturestart', preventGesture);
-      document.removeEventListener('gesturechange', preventGesture);
-      document.removeEventListener('touchmove', preventMultiTouch);
-      window.removeEventListener('wheel', preventZoomWheel);
-      window.removeEventListener('keydown', preventZoomKeys);
-    };
-  }, []);
+    saveDrawRecords(records);
+  }, [records]);
 
   const openCreatePool = () => {
     setEditingPool(null);
@@ -116,7 +114,44 @@ export default function App() {
     }
   };
 
+  const handleToggleRepeat = (allowRepeat: boolean) => {
+    if (!selectedPoolId) return;
+    setPools((currentPools) =>
+      currentPools.map((pool) =>
+        pool.id === selectedPoolId
+          ? {
+              ...pool,
+              allowRepeat,
+              // Enabling "no repeats" starts fresh so past wins don't retroactively block.
+              drawnItemIds: allowRepeat ? pool.drawnItemIds : [],
+            }
+          : pool,
+      ),
+    );
+  };
+
+  const markDrawn = (poolId: string, itemId: string) => {
+    setPools((currentPools) =>
+      currentPools.map((pool) =>
+        pool.id === poolId
+          ? { ...pool, drawnItemIds: [...(pool.drawnItemIds ?? []), itemId] }
+          : pool,
+      ),
+    );
+  };
+
+  const handleResetDrawn = () => {
+    if (!selectedPoolId) return;
+    // History (records) stays intact; only the per-pool drawn set is cleared.
+    setPools((currentPools) =>
+      currentPools.map((pool) =>
+        pool.id === selectedPoolId ? { ...pool, drawnItemIds: [] } : pool,
+      ),
+    );
+  };
+
   const handleSelectPool = (pool: PrizePool) => {
+    window.clearTimeout(clearSelectionTimer.current);
     setSelectedPoolId(pool.id);
     setIsDrawModalOpen(true);
     setMarqueeActive(true);
@@ -125,32 +160,71 @@ export default function App() {
   const closeDrawModal = () => {
     setIsDrawModalOpen(false);
     setMarqueeActive(false);
-    window.setTimeout(() => {
-      setSelectedPoolId(null);
-    }, 300);
+    window.clearTimeout(clearSelectionTimer.current);
+    // Keep the pool data alive through the modal's exit animation, then clear it.
+    clearSelectionTimer.current = window.setTimeout(() => setSelectedPoolId(null), 360);
+  };
+
+  const commitDraw = (pool: PrizePool, excluded: Set<string>) => {
+    const winner = pickWinner(pool, excluded);
+    if (!winner) return;
+
+    const record: DrawRecord = {
+      id: generateId(),
+      poolId: pool.id,
+      poolTitle: pool.title,
+      itemId: winner.id,
+      itemName: winner.name,
+      timestamp: Date.now(),
+      color: pool.color,
+      gradientTo: pool.gradientTo,
+    };
+
+    setRecords((current) => [record, ...current]);
+    if (!pool.allowRepeat) markDrawn(pool.id, winner.id);
+
+    setWinnerName(winner.name);
+    setDrawNonce((nonce) => nonce + 1);
+    setIsDrawModalOpen(false);
+    setIsDrawing(true);
+    setMarqueeActive(true);
   };
 
   const executeDraw = () => {
-    if (!selectedPool || selectedPool.items.length === 0) return;
+    window.clearTimeout(clearSelectionTimer.current);
+    const pool = pools.find((candidate) => candidate.id === selectedPoolId);
+    if (!pool || pool.items.length === 0) return;
+    commitDraw(pool, drawnIdsForPool(pool));
+  };
 
-    const winner = pickWinner(selectedPool);
-    setWinnerName(winner.name);
-    setIsDrawModalOpen(false);
-    setIsDrawing(true);
+  const handleResetAndDraw = () => {
+    window.clearTimeout(clearSelectionTimer.current);
+    const pool = pools.find((candidate) => candidate.id === selectedPoolId);
+    if (!pool || pool.items.length === 0) return;
+    // Clear the drawn set first, then draw against a fresh (empty) exclusion in one action.
+    setPools((currentPools) =>
+      currentPools.map((current) =>
+        current.id === pool.id ? { ...current, drawnItemIds: [] } : current,
+      ),
+    );
+    commitDraw({ ...pool, drawnItemIds: [] }, new Set());
   };
 
   const closeWinner = () => {
+    window.clearTimeout(clearSelectionTimer.current);
     setIsDrawing(false);
     setMarqueeActive(false);
-    setSelectedPoolId(null);
+    // Defer clearing so WinnerReveal keeps its pool colours/title through the exit fade.
+    clearSelectionTimer.current = window.setTimeout(() => setSelectedPoolId(null), 360);
   };
 
   const executeDrawAgain = () => {
-    setIsDrawing(false);
-    window.setTimeout(() => {
-      executeDraw();
-    }, 350);
+    executeDraw();
   };
+
+  const handleClearHistory = () => setRecords([]);
+  const handleDeleteRecord = (id: string) =>
+    setRecords((current) => current.filter((record) => record.id !== id));
 
   return (
     <div className="app-shell bg-black text-white font-body-md antialiased flex flex-col items-center justify-center overflow-hidden">
@@ -185,14 +259,27 @@ export default function App() {
             </button>
           </div>
 
-          <button
-            onClick={openCreatePool}
-            aria-label="新增獎池"
-            title="新增獎池"
-            className="text-white pointer-events-auto hover:text-primary-fixed hover:scale-110 hover:rotate-90 transition-all duration-300 ease-out active:scale-95 flex items-center justify-center p-2 rounded-full hover:bg-white/10 cursor-pointer"
-          >
-            <Plus size={32} strokeWidth={2.5} />
-          </button>
+          <div className="pointer-events-auto flex items-center gap-1">
+            <button
+              onClick={() => setIsHistoryOpen(true)}
+              aria-label="抽獎記錄"
+              title="抽獎記錄"
+              className="header-icon-button relative"
+            >
+              <History size={26} strokeWidth={2.2} />
+              {records.length > 0 && (
+                <span className="header-badge">{records.length > 99 ? '99+' : records.length}</span>
+              )}
+            </button>
+            <button
+              onClick={openCreatePool}
+              aria-label="新增獎池"
+              title="新增獎池"
+              className="header-icon-button header-icon-button--add"
+            >
+              <Plus size={30} strokeWidth={2.5} />
+            </button>
+          </div>
         </header>
 
         <main className="flex-grow w-full max-w-[100vw] relative">
@@ -212,14 +299,33 @@ export default function App() {
         onDelete={handleDeletePool}
       />
 
-      <DrawModal isOpen={isDrawModalOpen && !isDrawing} pool={selectedPool} onClose={closeDrawModal} onDraw={executeDraw} />
+      <DrawModal
+        isOpen={isDrawModalOpen && !isDrawing}
+        pool={selectedPool}
+        drawnItemIds={drawnItemIds}
+        onClose={closeDrawModal}
+        onDraw={executeDraw}
+        onToggleRepeat={handleToggleRepeat}
+        onResetDrawn={handleResetDrawn}
+        onResetAndDraw={handleResetAndDraw}
+      />
 
       <WinnerReveal
         isOpen={isDrawing}
         pool={selectedPool}
         winnerName={winnerName}
+        drawNonce={drawNonce}
+        canDrawAgain={canDrawAgain}
         onClose={closeWinner}
         onDrawAgain={executeDrawAgain}
+      />
+
+      <HistoryModal
+        isOpen={isHistoryOpen}
+        records={records}
+        onClose={() => setIsHistoryOpen(false)}
+        onClearAll={handleClearHistory}
+        onDeleteRecord={handleDeleteRecord}
       />
     </div>
   );

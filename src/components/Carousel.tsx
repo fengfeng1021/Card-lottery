@@ -1,7 +1,15 @@
-import { useEffect, useRef, useState } from 'react';
+import {
+  KeyboardEvent as ReactKeyboardEvent,
+  MouseEvent as ReactMouseEvent,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react';
 import { Pencil } from 'lucide-react';
 import { PrizePool } from '../types';
 import DeckStack from './DeckStack';
+import { gsap, prefersReducedMotion } from '../lib/gsap';
 
 interface CarouselProps {
   pools: PrizePool[];
@@ -9,149 +17,230 @@ interface CarouselProps {
   onEditPool: (pool: PrizePool) => void;
 }
 
-const getWrappedIndex = (index: number, total: number) => ((index % total) + total) % total;
+const wrapIndex = (index: number, total: number) => ((index % total) + total) % total;
+
+const calculateRadius = () => {
+  const width = window.innerWidth;
+  const height = window.innerHeight;
+  if (width < 600) return Math.max(185, Math.min(245, width * 0.56));
+  if (width < 1024) return Math.max(280, Math.min(390, width * 0.42, height * 0.42));
+  return Math.max(420, Math.min(720, width * 0.42));
+};
 
 export default function Carousel({ pools, onSelectPool, onEditPool }: CarouselProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const carouselRef = useRef<HTMLDivElement>(null);
   const itemsRef = useRef<(HTMLDivElement | null)[]>([]);
+  const deckRefs = useRef<(HTMLElement | null)[]>([]);
 
-  const currentAngle = useRef(0);
-  const targetAngle = useRef(0);
+  // Animated state driven by GSAP (kept in refs so tweens mutate them directly).
+  const rot = useRef({ angle: 0 }).current;
+  const tilt = useRef({ x: 0, y: 0 }).current;
+  const spinTween = useRef<gsap.core.Tween | null>(null);
+
   const isDragging = useRef(false);
   const lastX = useRef(0);
+  const velocity = useRef(0);
   const dragDistance = useRef(0);
   const suppressClick = useRef(false);
-  const animationFrameId = useRef<number>(0);
   const wheelTimeout = useRef<number>(0);
   const activeIndexRef = useRef(0);
+  const tiltXTo = useRef<((value: number) => void) | null>(null);
+  const tiltYTo = useRef<((value: number) => void) | null>(null);
+
+  const [radius, setRadius] = useState(calculateRadius);
+  const [activeIndex, setActiveIndex] = useState(0);
 
   const numItems = pools.length;
 
-  const calculateRadius = () => {
-    const width = window.innerWidth;
-    const height = window.innerHeight;
+  // Mirror layout inputs into refs so any captured render() closure always reads current values.
+  const radiusRef = useRef(radius);
+  radiusRef.current = radius;
+  const numItemsRef = useRef(numItems);
+  numItemsRef.current = numItems;
 
-    if (width < 600) {
-      return Math.max(185, Math.min(245, width * 0.56));
-    }
-
-    if (width < 1024) {
-      return Math.max(280, Math.min(390, width * 0.42, height * 0.42));
-    }
-
-    return Math.max(420, Math.min(720, width * 0.42));
-  };
-
-  const [radius, setRadius] = useState(300);
-  const [activeIndex, setActiveIndex] = useState(0);
-
+  // Debounced resize so a burst of resize events (mobile URL bar, drag-resize) rebuilds once.
   useEffect(() => {
-    const handleResize = () => setRadius(calculateRadius());
-    handleResize();
+    let timer = 0;
+    const handleResize = () => {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => setRadius(calculateRadius()), 150);
+    };
     window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener('resize', handleResize);
+    };
   }, []);
 
-  const snapToClosest = () => {
-    const anglePerItem = 360 / Math.max(1, numItems);
-    targetAngle.current = Math.round(targetAngle.current / anglePerItem) * anglePerItem;
+  // The single render function. Reads only refs/stable values, so any captured copy stays correct.
+  const render = () => {
+    const wrap = carouselRef.current;
+    const n = numItemsRef.current;
+    const r = radiusRef.current;
+    if (!wrap || n === 0) return;
+
+    const angle = rot.angle;
+    wrap.style.transform = `translateZ(${-r}px) rotateX(${tilt.y}deg) rotateY(${angle + tilt.x}deg)`;
+
+    const anglePerItem = 360 / n;
+    const nextActive = wrapIndex(Math.round(-angle / anglePerItem), n);
+
+    for (let i = 0; i < n; i += 1) {
+      const item = itemsRef.current[i];
+      if (!item) continue;
+
+      const facing = ((i * anglePerItem + angle) * Math.PI) / 180;
+      const f = (Math.cos(facing) + 1) / 2; // 0 = back, 1 = front
+      const scale = 0.82 + 0.18 * f;
+
+      item.style.transform = `rotateY(${i * anglePerItem}deg) translateZ(${r}px) scale(${scale})`;
+      item.style.opacity = `${(0.4 + 0.6 * f).toFixed(3)}`;
+      item.style.filter = `brightness(${(0.5 + 0.5 * f).toFixed(3)})`;
+      item.style.zIndex = `${Math.round(f * 100)}`;
+    }
+
+    if (nextActive !== activeIndexRef.current) {
+      activeIndexRef.current = nextActive;
+      // Avoid re-render churn mid-drag; the value is flushed on pointer up.
+      if (!isDragging.current) setActiveIndex(nextActive);
+    }
+    deckRefs.current.forEach((deck, i) => {
+      if (deck) deck.classList.toggle('is-selected', i === nextActive && !isDragging.current);
+    });
   };
 
-  useEffect(() => {
-    if (numItems === 0) return undefined;
-
-    const updateCarousel = () => {
-      const velocity = (targetAngle.current - currentAngle.current) * 0.12;
-      currentAngle.current += velocity;
-
-      if (carouselRef.current) {
-        carouselRef.current.style.transform = `translateZ(${-radius}px) rotateY(${currentAngle.current}deg)`;
-      }
-
-      const anglePerItem = 360 / numItems;
-      const nextActiveIndex = getWrappedIndex(Math.round(-currentAngle.current / anglePerItem), numItems);
-      const stretchFactor = Math.max(0.6, 1 - Math.abs(velocity) / 16);
-
-      if (activeIndexRef.current !== nextActiveIndex) {
-        activeIndexRef.current = nextActiveIndex;
-        setActiveIndex(nextActiveIndex);
-      }
-
-      itemsRef.current.forEach((item, index) => {
-        if (!item) return;
-
-        const itemAngle = index * anglePerItem;
-        item.style.transform = `rotateY(${itemAngle}deg) translateZ(${radius}px)`;
-
-        const deck = item.querySelector('.deck-stack') as HTMLElement | null;
-        if (deck) {
-          deck.style.setProperty('--thickness-scale', stretchFactor.toString());
-          deck.classList.toggle('is-selected', index === nextActiveIndex && Math.abs(velocity) < 0.9);
-        }
-      });
-
-      animationFrameId.current = requestAnimationFrame(updateCarousel);
+  // Create tilt tweens once and tear them down (plus the spin) on unmount — no per-resize leak.
+  useLayoutEffect(() => {
+    tiltXTo.current = gsap.quickTo(tilt, 'x', { duration: 0.5, ease: 'power3', onUpdate: render });
+    tiltYTo.current = gsap.quickTo(tilt, 'y', { duration: 0.5, ease: 'power3', onUpdate: render });
+    return () => {
+      gsap.killTweensOf(tilt);
+      spinTween.current?.kill();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-    updateCarousel();
-
-    return () => cancelAnimationFrame(animationFrameId.current);
+  // Rebuild cached deck refs and re-render whenever the deck set or radius changes.
+  useLayoutEffect(() => {
+    deckRefs.current = itemsRef.current.map(
+      (item) => item?.querySelector('.deck-stack') as HTMLElement | null,
+    );
+    spinTween.current?.kill();
+    render();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [numItems, radius]);
 
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return undefined;
+  const snapTarget = (raw: number) => {
+    const anglePerItem = 360 / Math.max(1, numItemsRef.current);
+    return Math.round(raw / anglePerItem) * anglePerItem;
+  };
 
-    const handleWheel = (event: WheelEvent) => {
-      event.preventDefault();
-      targetAngle.current -= event.deltaY * 0.2;
-      clearTimeout(wheelTimeout.current);
-      wheelTimeout.current = window.setTimeout(snapToClosest, 150);
-    };
+  const spinTo = (target: number, duration = 0.8) => {
+    spinTween.current?.kill();
+    const reduce = prefersReducedMotion();
+    spinTween.current = gsap.to(rot, {
+      angle: target,
+      duration: reduce ? 0.2 : duration,
+      ease: 'power3.out',
+      onUpdate: render,
+    });
+  };
 
-    container.addEventListener('wheel', handleWheel, { passive: false });
-    return () => {
-      container.removeEventListener('wheel', handleWheel);
-      clearTimeout(wheelTimeout.current);
-    };
-  }, [numItems]);
+  const settleFromVelocity = () => {
+    const inertia = prefersReducedMotion() ? 0 : velocity.current * 4;
+    spinTo(snapTarget(rot.angle + inertia));
+  };
 
-  const handlePointerDown = (clientX: number) => {
+  // Pointer / drag handlers -------------------------------------------------
+  const pointerDown = (clientX: number) => {
+    spinTween.current?.kill();
     isDragging.current = true;
     suppressClick.current = false;
     dragDistance.current = 0;
+    velocity.current = 0;
     lastX.current = clientX;
     if (containerRef.current) containerRef.current.style.cursor = 'grabbing';
   };
 
-  const handlePointerMove = (clientX: number) => {
+  const pointerMove = (clientX: number) => {
     if (!isDragging.current) return;
-
     const delta = clientX - lastX.current;
-    targetAngle.current += delta * 0.5;
-    dragDistance.current += Math.abs(delta);
     lastX.current = clientX;
+    velocity.current = velocity.current * 0.6 + delta * 0.4;
+    dragDistance.current += Math.abs(delta);
+    rot.angle += delta * 0.35;
+    render();
   };
 
-  const handlePointerUp = () => {
+  const pointerUp = () => {
     if (!isDragging.current) return;
-
     isDragging.current = false;
     suppressClick.current = dragDistance.current > 8;
     if (containerRef.current) containerRef.current.style.cursor = 'grab';
-    snapToClosest();
-
+    setActiveIndex(activeIndexRef.current); // flush after the drag-suppressed updates
+    settleFromVelocity();
     window.setTimeout(() => {
       suppressClick.current = false;
     }, 0);
   };
 
-  const handleSelect = (pool: PrizePool) => {
-    const velocity = Math.abs((targetAngle.current - currentAngle.current) * 0.12);
-    if (!suppressClick.current && velocity < 8) {
-      onSelectPool(pool);
+  // Wheel to rotate ---------------------------------------------------------
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container || numItems === 0) return undefined;
+
+    const handleWheel = (event: WheelEvent) => {
+      event.preventDefault();
+      spinTween.current?.kill();
+      rot.angle -= event.deltaY * 0.25;
+      render();
+      window.clearTimeout(wheelTimeout.current);
+      wheelTimeout.current = window.setTimeout(() => spinTo(snapTarget(rot.angle), 0.5), 140);
+    };
+
+    container.addEventListener('wheel', handleWheel, { passive: false });
+    return () => {
+      container.removeEventListener('wheel', handleWheel);
+      window.clearTimeout(wheelTimeout.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [numItems]);
+
+  // Pointer parallax tilt (fine pointers only) -----------------------------
+  const handleContainerPointerMove = (event: ReactMouseEvent) => {
+    if (isDragging.current || prefersReducedMotion()) return;
+    if (window.matchMedia('(pointer: coarse)').matches) return;
+    const nx = event.clientX / window.innerWidth - 0.5;
+    const ny = event.clientY / window.innerHeight - 0.5;
+    tiltXTo.current?.(nx * 8);
+    tiltYTo.current?.(-ny * 6);
+  };
+
+  const resetTilt = () => {
+    tiltXTo.current?.(0);
+    tiltYTo.current?.(0);
+  };
+
+  // Keyboard: arrows rotate, Enter/Space opens the active pool --------------
+  const handleKeyDown = (event: ReactKeyboardEvent) => {
+    if (numItems === 0) return;
+    const anglePerItem = 360 / numItems;
+    if (event.key === 'ArrowLeft') {
+      event.preventDefault();
+      spinTo(snapTarget(rot.angle) + anglePerItem, 0.5);
+    } else if (event.key === 'ArrowRight') {
+      event.preventDefault();
+      spinTo(snapTarget(rot.angle) - anglePerItem, 0.5);
+    } else if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      const pool = pools[activeIndexRef.current];
+      if (pool) onSelectPool(pool);
     }
+  };
+
+  const handleSelect = (pool: PrizePool) => {
+    if (!suppressClick.current) onSelectPool(pool);
   };
 
   if (pools.length === 0) {
@@ -166,13 +255,24 @@ export default function Carousel({ pools, onSelectPool, onEditPool }: CarouselPr
     <div
       ref={containerRef}
       className="carousel-container absolute inset-0 z-10"
-      onMouseDown={(event) => handlePointerDown(event.clientX)}
-      onMouseMove={(event) => handlePointerMove(event.clientX)}
-      onMouseUp={handlePointerUp}
-      onMouseLeave={handlePointerUp}
-      onTouchStart={(event) => handlePointerDown(event.touches[0].clientX)}
-      onTouchMove={(event) => handlePointerMove(event.touches[0].clientX)}
-      onTouchEnd={handlePointerUp}
+      role="group"
+      tabIndex={0}
+      aria-label="獎池輪播，使用左右方向鍵切換，Enter 開啟"
+      onKeyDown={handleKeyDown}
+      onMouseDown={(event) => pointerDown(event.clientX)}
+      onMouseMove={(event) => {
+        pointerMove(event.clientX);
+        handleContainerPointerMove(event);
+      }}
+      onMouseUp={pointerUp}
+      onMouseLeave={() => {
+        pointerUp();
+        resetTilt();
+      }}
+      onTouchStart={(event) => pointerDown(event.touches[0]?.clientX ?? 0)}
+      onTouchMove={(event) => pointerMove(event.touches[0]?.clientX ?? lastX.current)}
+      onTouchEnd={pointerUp}
+      onTouchCancel={pointerUp}
     >
       <div ref={carouselRef} className="carousel-wrap">
         {pools.map((pool, index) => (
