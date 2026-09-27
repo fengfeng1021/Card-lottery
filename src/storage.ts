@@ -23,10 +23,16 @@ const sanitizeItem = (value: unknown, fallbackId: string): PrizeItem | null => {
       ? value.probability
       : undefined;
 
+  const deferredDraws =
+    typeof value.deferredDraws === 'number' && Number.isFinite(value.deferredDraws)
+      ? value.deferredDraws
+      : undefined;
+
   return {
     id: toStringValue(value.id) ?? fallbackId,
     name,
     ...(probability !== undefined ? { probability } : {}),
+    ...(deferredDraws !== undefined ? { deferredDraws } : {}),
   };
 };
 

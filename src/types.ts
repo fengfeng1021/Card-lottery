@@ -2,6 +2,11 @@ export interface PrizeItem {
   id: string;
   name: string;
   probability?: number;
+  /**
+   * Draws the pool runs before this entry may leave the box: the entry sits out the first N draws
+   * of its pool. Entries without a hold are in the box from the first draw.
+   */
+  deferredDraws?: number;
 }
 
 export interface PrizePool {

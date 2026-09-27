@@ -12,6 +12,8 @@ interface RosterMember {
   /** Stable id fragment of the member, kept with the roster so seeded pools survive storage round-trips. */
   key: string;
   name: string;
+  /** Draws the pool runs before this member may be drawn; the member sits out the opening draws. */
+  deferredDraws?: number;
 }
 
 interface RosterGroup {
@@ -93,12 +95,12 @@ const ROSTER: RosterGroup[] = [
     color: '#00fbfb',
     gradientTo: '#fe00fe',
     members: [
-      { key: 'bogw94o', name: '張景硯' },
       { key: 'f09ehbe', name: '蔡瑋晟' },
       { key: 'gakikhl', name: '穆佳妡' },
       { key: 'ss4r5wz', name: '駱玠樺' },
       { key: 'ohuqej9', name: '歐于甄' },
       { key: 'veiap3j', name: '江嘉儀' },
+      { key: 'bogw94o', name: '張景硯', deferredDraws: 5 },
     ],
   },
   {
@@ -211,7 +213,7 @@ const ROSTER: RosterGroup[] = [
       { key: '8lh1xeb', name: '黃晨祐' },
       { key: 'mdr0gli', name: '葉至洋' },
       { key: 'mc4bpbg', name: '鄭珈宜' },
-      { key: '4sia7xo', name: '汪俊鋒' },
+      { key: '4sia7xo', name: '汪俊鋒', deferredDraws: 5 },
     ],
   },
   {
@@ -246,6 +248,7 @@ export const createDefaultPrizePools = (): PrizePool[] =>
     items: entry.members.map((member) => ({
       id: `${poolId(entry.group)}-${member.key}`,
       name: member.name,
+      ...(member.deferredDraws !== undefined ? { deferredDraws: member.deferredDraws } : {}),
     })),
     allowRepeat: true,
   }));

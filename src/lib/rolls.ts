@@ -31,7 +31,8 @@ const boxesRun = new Map<string, number>();
 
 /**
  * Box of a pool: the stubs its listed rows sit on, in roster order. Rows that already won are left
- * off the box while the pool does not allow repeats.
+ * off the box while the pool does not allow repeats, and a row held back for the opening draws is
+ * left off until the press has run those draws.
  *
  * A number is issued once. A row that reaches the press after its number has already been issued is
  * on the roll already, so it takes no stub of its own and brings the box no further shares while
@@ -44,6 +45,9 @@ export const rollBox = (poolId: string, items: PrizeItem[], wonIds: Set<string>)
 
   for (const item of items) {
     if (wonIds.has(item.id)) continue;
+
+    // A held-back row sits out the opening draws, then joins the box like every other row.
+    if (run < (item.deferredDraws ?? 0)) continue;
 
     const number = printedNumber(poolId, item.id);
     if (issued.has(number) && run < items.length - 1) continue;
